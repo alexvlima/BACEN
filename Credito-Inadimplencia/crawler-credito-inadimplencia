@@ -1,0 +1,183 @@
+#!/usr/bin/perl
+
+# apt-get install libjson-perl
+
+use LWP::Simple;
+use JSON qw( decode_json );
+use DBI;
+use strict;
+use warnings;
+
+my $db_homolog = DBI->connect('dbi:ODBC:Desenv_DataSebrae', 'UsrDDSebrae', '1b7437f1b1')
+    or die "Can't connect to dbi:ODBC:Desenv_DataSebrae: $DBI::errstr";
+
+# Cria o esquema do credito caso ele não exista
+print "Criando esquema crédito\n\n";
+
+$db_homolog->do(q/IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name='credito') BEGIN EXEC sp_executesql N'CREATE SCHEMA credito' END/);
+
+# Cria a tabela de importação e exportação caso elas não existam
+print "Criando as tabelas credito.saldo e credito.inadimplencia\n\n";
+
+$db_homolog->do(q/IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='credito' and xtype='U') CREATE TABLE credito.saldo (codigo INT NOT NULL, pessoa VARCHAR(2) NOT NULL, estado VARCHAR(2) NOT NULL, mes INT NOT NULL, ano INT NOT NULL, valor BIGINT NOT NULL)/);
+
+$db_homolog->do(q/IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='credito' and xtype='U') CREATE TABLE credito.inadimplencia (codigo INT NOT NULL, pessoa VARCHAR(2) NOT NULL, estado VARCHAR(2) NOT NULL, mes INT NOT NULL, ano INT NOT NULL, valor FLOAT NOT NULL)/);
+
+
+# Limpa as tabelas para uma nova carga dos dados
+print "Limpando as tabelas credito.saldo e credito.inadimplencia\n\n";
+
+$db_homolog->do(q/TRUNCATE TABLE credito.saldo/);
+$db_homolog->do(q/TRUNCATE TABLE credito.inadimplencia/);
+
+
+# Lista de metadados do indicador saldo das operações de crédito
+my @saldos = (
+	{estado => "AC", codigo => 14002, pessoa => "PF"},
+	{estado => "AL", codigo => 14003, pessoa => "PF"},
+	{estado => "AP", codigo => 14004, pessoa => "PF"},
+	{estado => "AM", codigo => 14005, pessoa => "PF"},
+	{estado => "BA", codigo => 14006, pessoa => "PF"},
+	{estado => "CE", codigo => 14007, pessoa => "PF"},
+	{estado => "DF", codigo => 14008, pessoa => "PF"},
+	{estado => "ES", codigo => 14009, pessoa => "PF"},
+	{estado => "GO", codigo => 14010, pessoa => "PF"},
+	{estado => "MA", codigo => 14011, pessoa => "PF"},
+	{estado => "MT", codigo => 14012, pessoa => "PF"},
+	{estado => "MS", codigo => 14013, pessoa => "PF"},
+	{estado => "MG", codigo => 14014, pessoa => "PF"},
+	{estado => "PA", codigo => 14015, pessoa => "PF"},
+	{estado => "PB", codigo => 14016, pessoa => "PF"},
+	{estado => "PR", codigo => 14017, pessoa => "PF"},
+	{estado => "PE", codigo => 14018, pessoa => "PF"},
+	{estado => "PI", codigo => 14019, pessoa => "PF"},
+	{estado => "RJ", codigo => 14020, pessoa => "PF"},
+	{estado => "RN", codigo => 14021, pessoa => "PF"},
+	{estado => "RS", codigo => 14022, pessoa => "PF"},
+	{estado => "RO", codigo => 14023, pessoa => "PF"},
+	{estado => "RR", codigo => 14024, pessoa => "PF"},
+	{estado => "SC", codigo => 14025, pessoa => "PF"},
+	{estado => "SP", codigo => 14026, pessoa => "PF"},
+	{estado => "SE", codigo => 14027, pessoa => "PF"},
+	{estado => "TO", codigo => 14028, pessoa => "PF"},
+	{estado => "AC", codigo => 14029, pessoa => "PJ"},
+	{estado => "AL", codigo => 14030, pessoa => "PJ"},
+	{estado => "AP", codigo => 14031, pessoa => "PJ"},
+	{estado => "AM", codigo => 14032, pessoa => "PJ"},
+	{estado => "BA", codigo => 14033, pessoa => "PJ"},
+	{estado => "CE", codigo => 14034, pessoa => "PJ"},
+	{estado => "DF", codigo => 14035, pessoa => "PJ"},
+	{estado => "ES", codigo => 14036, pessoa => "PJ"},
+	{estado => "GO", codigo => 14037, pessoa => "PJ"},
+	{estado => "MA", codigo => 14038, pessoa => "PJ"},
+	{estado => "MT", codigo => 14039, pessoa => "PJ"},
+	{estado => "MS", codigo => 14040, pessoa => "PJ"},
+	{estado => "MG", codigo => 14041, pessoa => "PJ"},
+	{estado => "PA", codigo => 14042, pessoa => "PJ"},
+	{estado => "PB", codigo => 14043, pessoa => "PJ"},
+	{estado => "PR", codigo => 14044, pessoa => "PJ"},
+	{estado => "PE", codigo => 14045, pessoa => "PJ"},
+	{estado => "PI", codigo => 14046, pessoa => "PJ"},
+	{estado => "RJ", codigo => 14047, pessoa => "PJ"},
+	{estado => "RN", codigo => 14048, pessoa => "PJ"},
+	{estado => "RS", codigo => 14049, pessoa => "PJ"},
+	{estado => "RO", codigo => 14050, pessoa => "PJ"},
+	{estado => "RR", codigo => 14051, pessoa => "PJ"},
+	{estado => "SC", codigo => 14052, pessoa => "PJ"},
+	{estado => "SP", codigo => 14053, pessoa => "PJ"},
+	{estado => "SE", codigo => 14054, pessoa => "PJ"},
+	{estado => "TO", codigo => 14055, pessoa => "PJ"}
+);
+
+
+# Inicia a carga do indicador saldo das operações de crédito
+print "Inicia a carga do indicador saldo das operações de crédito\n\n";
+
+for my $saldo( @saldos ){
+	my $url_bcb = "http://api.bcb.gov.br/dados/serie/bcdata.sgs.$saldo->{codigo}/dados";
+    my $result = get($url_bcb);
+    die "Could not get $url_bcb!" unless defined $result;
+    my $ind_saldo = decode_json( $result );
+
+    my $saldo_insert = $db_homolog->prepare("INSERT INTO credito.saldo (codigo, pessoa, estado, mes, ano, valor) VALUES (?, ?, ?, ?, ?, ?);");
+
+    for my $i_saldo( @{$ind_saldo} ) {
+    	my @i_dates = split('/', $i_saldo->{data});
+    	$saldo_insert->execute("$saldo->{codigo}", "$saldo->{pessoa}", "$saldo->{estado}", "$i_dates[1]", "$i_dates[2]", "$i_saldo->{valor}000000");
+	};
+};
+
+# Lista de metadados do indicador inadimplência das operações de crédito
+my @inadimplencias = (
+	{estado => "AC", codigo => 15861, pessoa => "PF"},
+	{estado => "AL", codigo => 15862, pessoa => "PF"},
+	{estado => "AP", codigo => 15863, pessoa => "PF"},
+	{estado => "AM", codigo => 15864, pessoa => "PF"},
+	{estado => "BA", codigo => 15865, pessoa => "PF"},
+	{estado => "CE", codigo => 15866, pessoa => "PF"},
+	{estado => "DF", codigo => 15867, pessoa => "PF"},
+	{estado => "ES", codigo => 15868, pessoa => "PF"},
+	{estado => "GO", codigo => 15869, pessoa => "PF"},
+	{estado => "MA", codigo => 15870, pessoa => "PF"},
+	{estado => "MT", codigo => 15871, pessoa => "PF"},
+	{estado => "MS", codigo => 15872, pessoa => "PF"},
+	{estado => "MG", codigo => 15873, pessoa => "PF"},
+	{estado => "PA", codigo => 15874, pessoa => "PF"},
+	{estado => "PB", codigo => 15875, pessoa => "PF"},
+	{estado => "PR", codigo => 15876, pessoa => "PF"},
+	{estado => "PE", codigo => 15877, pessoa => "PF"},
+	{estado => "PI", codigo => 15878, pessoa => "PF"},
+	{estado => "RJ", codigo => 15879, pessoa => "PF"},
+	{estado => "RN", codigo => 15880, pessoa => "PF"},
+	{estado => "RS", codigo => 15881, pessoa => "PF"},
+	{estado => "RO", codigo => 15882, pessoa => "PF"},
+	{estado => "RR", codigo => 15883, pessoa => "PF"},
+	{estado => "SC", codigo => 15884, pessoa => "PF"},
+	{estado => "SP", codigo => 15885, pessoa => "PF"},
+	{estado => "SE", codigo => 15886, pessoa => "PF"},
+	{estado => "TO", codigo => 15887, pessoa => "PF"},
+	{estado => "AC", codigo => 15893, pessoa => "PJ"},
+	{estado => "AL", codigo => 15894, pessoa => "PJ"},
+	{estado => "AP", codigo => 15895, pessoa => "PJ"},
+	{estado => "AM", codigo => 15896, pessoa => "PJ"},
+	{estado => "BA", codigo => 15897, pessoa => "PJ"},
+	{estado => "CE", codigo => 15898, pessoa => "PJ"},
+	{estado => "DF", codigo => 15899, pessoa => "PJ"},
+	{estado => "ES", codigo => 15900, pessoa => "PJ"},
+	{estado => "GO", codigo => 15901, pessoa => "PJ"},
+	{estado => "MA", codigo => 15902, pessoa => "PJ"},
+	{estado => "MT", codigo => 15903, pessoa => "PJ"},
+	{estado => "MS", codigo => 15904, pessoa => "PJ"},
+	{estado => "MG", codigo => 15905, pessoa => "PJ"},
+	{estado => "PA", codigo => 15906, pessoa => "PJ"},
+	{estado => "PB", codigo => 15907, pessoa => "PJ"},
+	{estado => "PR", codigo => 15908, pessoa => "PJ"},
+	{estado => "PE", codigo => 15909, pessoa => "PJ"},
+	{estado => "PI", codigo => 15910, pessoa => "PJ"},
+	{estado => "RJ", codigo => 15911, pessoa => "PJ"},
+	{estado => "RN", codigo => 15912, pessoa => "PJ"},
+	{estado => "RS", codigo => 15913, pessoa => "PJ"},
+	{estado => "RO", codigo => 15914, pessoa => "PJ"},
+	{estado => "RR", codigo => 15915, pessoa => "PJ"},
+	{estado => "SC", codigo => 15916, pessoa => "PJ"},
+	{estado => "SP", codigo => 15917, pessoa => "PJ"},
+	{estado => "SE", codigo => 15918, pessoa => "PJ"},
+	{estado => "TO", codigo => 15919, pessoa => "PJ"}
+);
+
+# Inicia a carga do indicador inadimplência das operações de crédito
+print "Inicia a carga do indicador inadimplência das operações de crédito\n\n";
+
+for my $inadimplencia( @inadimplencias ){
+	my $url_bcb = "http://api.bcb.gov.br/dados/serie/bcdata.sgs.$inadimplencia->{codigo}/dados";
+    my $result = get($url_bcb);
+    die "Could not get $url_bcb!" unless defined $result;
+    my $ind_inadimplencia = decode_json( $result );
+
+    my $inadimplencia_insert = $db_homolog->prepare("INSERT INTO credito.inadimplencia (codigo, pessoa, estado, mes, ano, valor) VALUES (?, ?, ?, ?, ?, ?);");
+
+    for my $i_inadimplencia( @{$ind_inadimplencia} ) {
+    	my @i_dates = split('/', $i_inadimplencia->{data});
+    	$inadimplencia_insert->execute("$inadimplencia->{codigo}", "$inadimplencia->{pessoa}", "$inadimplencia->{estado}", "$i_dates[1]", "$i_dates[2]", "$i_inadimplencia->{valor}");
+	};
+};
