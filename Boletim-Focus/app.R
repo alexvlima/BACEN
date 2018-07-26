@@ -8,8 +8,6 @@ library(shiny)
 ### SHINY DEPLOY ###
 ####################
 
-
-
 ui <- shinyUI(pageWithSidebar(  
   headerPanel("Boletim Focus - Relatório de Mercado - Expectativas",windowTitle = 'Boletim-Focus'),
   sidebarPanel(
@@ -37,7 +35,7 @@ ui <- shinyUI(pageWithSidebar(
                                                 'PIB Total' = 'PIB Total'),
                                  selected = 'PIB Total'),
                      selectInput('metrica_pib', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     ),
     conditionalPanel(condition = "input.indicador == 'INFLAÇÃO'",
@@ -64,7 +62,7 @@ ui <- shinyUI(pageWithSidebar(
                                                 'Preços administrados por contrato e monitorados' = 'Preços administrados por contrato e monitorados'),
                                  selected = 'IPCA'),
                      selectInput('metrica_inflacao', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     ),
     conditionalPanel(condition = "input.indicador == 'CÂMBIO'",
@@ -84,7 +82,7 @@ ui <- shinyUI(pageWithSidebar(
                                  choices = list('Taxa de câmbio' = 'Taxa de câmbio'),
                                  selected = 'Taxa de câmbio'),
                      selectInput('metrica_cambio', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     ),
     conditionalPanel(condition = "input.indicador == 'SELIC'",
@@ -104,7 +102,7 @@ ui <- shinyUI(pageWithSidebar(
                                  choices = list('Meta para taxa over-selic' = 'Meta para taxa over-selic'),
                                  selected = 'Meta para taxa over-selic'),
                      selectInput('metrica_selic', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     ),
     conditionalPanel(condition = "input.indicador == 'BALANÇA COMERCIAL'",
@@ -124,7 +122,7 @@ ui <- shinyUI(pageWithSidebar(
                                  choices = list('Balança Comercial' = 'Balança Comercial'),
                                  selected = 'Balança Comercial'),
                      selectInput('metrica_balanca_comercial', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     ),
     conditionalPanel(condition = "input.indicador == 'BALANÇO DE PAGAMENTOS'",
@@ -144,7 +142,7 @@ ui <- shinyUI(pageWithSidebar(
                                  choices = list('Balanço de Pagamentos' = 'Balanço de Pagamentos'),
                                  selected = 'Balanço de Pagamentos'),
                      selectInput('metrica_balanco_pagamentos', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     ),
     conditionalPanel(condition = "input.indicador == 'FISCAL'",
@@ -164,7 +162,7 @@ ui <- shinyUI(pageWithSidebar(
                                  choices = list('Fiscal' = 'Fiscal'),
                                  selected = 'Fiscal'),
                      selectInput('metrica_fiscal', label = h3('Métrica:'), 
-                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max'),
+                                 choices = list('Média' = 'mean', 'Mediana' = 'median', 'Mínimo' = 'min', 'Máximo' = 'max', 'Desvio Padrão' = 'sd', 'Coeficiente de Variação' = 'coefvar'),
                                  selected = 'mean')
     )
   ),
@@ -172,7 +170,8 @@ ui <- shinyUI(pageWithSidebar(
   mainPanel(
     tabsetPanel(
       tabPanel('PIB',
-               plotOutput('Graf_PIB1')),
+               plotOutput('Graf_PIB1'),
+               plotOutput('Graf_PIB2')),
       tabPanel('INFLAÇÃO',
                plotOutput('Graf_Inflacao1')),
       tabPanel('CÂMBIO',
@@ -200,6 +199,7 @@ server <- function(input, output, session){
   library(dplyr)
   library(tidyr)
   library(lubridate)
+  library(plotly)
   
   dates_pib <- reactiveValues()
   observe({
@@ -209,16 +209,32 @@ server <- function(input, output, session){
   
   base_pib <- reactive({
     pib %>%
-      select(indic,date,reference_year, mean, median, min, max) %>%
+      select(indic,date,reference_year, mean, median, min, max, sd, coefvar) %>%
       gather("metric", "value", -c(indic,date,reference_year)) %>%
       filter(indic==input$indic_pib,
-             reference_year==input$num_pib,
+             # reference_year==input$num_pib,
              metric == input$metrica_pib,
              date >= input$data_pib[1] & date <= input$data_pib[2])
   })
   
   output$Graf_PIB1 <- renderPlot({
-    ggplot(base_pib(), aes(date, value)) +
+    base_pib() %>%
+      filter(date == max(date)) %>%
+      ggplot(aes(x = factor(reference_year), y=value)) +
+      geom_bar(stat = 'identity', fill = 'darkblue') +
+      labs(title=paste0('Crescimento Esperado do PIB'),
+           caption='Fonte: Boletim Focus - Banco Central') +
+      xlab('Ano') +
+      ylab('% a.a.') +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.caption = element_text(hjust = 0),
+            panel.background = element_rect(fill = 'white', colour = 'grey50'))
+  })
+    
+  output$Graf_PIB2 <- renderPlot({
+    base_pib() %>%
+      filter(reference_year==input$num_pib) %>%
+      ggplot(aes(date, value)) +
       geom_line(size=1.2, colour='darkblue') +
       labs(title=paste0('Crescimento Esperado para ',input$num_pib),
            caption='Fonte: Boletim Focus - Banco Central') +
@@ -226,7 +242,7 @@ server <- function(input, output, session){
       ylab('% a.a.') +
       theme(plot.title = element_text(hjust = 0.5),
             plot.caption = element_text(hjust = 0),
-            panel.background = element_rect(fill = 'white', colour = 'grey50')) 
+            panel.background = element_rect(fill = 'white', colour = 'grey50'))
   })
   
   
@@ -238,7 +254,7 @@ server <- function(input, output, session){
   
   base_inflacao <- reactive({
     inflacao %>%
-      select(indic,date,reference_year, mean, median, min, max) %>%
+      select(indic,date,reference_year, mean, median, min, max, sd, coefvar) %>%
       gather("metric", "value", -c(indic,date,reference_year)) %>%
       filter(indic==input$indic_inflacao,
              reference_year==input$num_inflacao,
