@@ -5,18 +5,11 @@
 library(rbcb)
 library(dplyr)
 
-####################
-### PROXY CONFIG ###
-####################
-
-# Proxy do Sebrae Nacional
-# set_config(use_proxy(url='10.1.140.76',port=8080))
-
 ###################
 ### PIB - FOCUS ###
 ###################
 
-indic_pib <- c('Produção industrial', 'PIB Agropecuária', 'PIB Industrial', 'PIB Serviços', 'PIB Total')
+indic_pib <- c('Produ\u00e7\u00e3o industrial', 'PIB Agropecu\u00e1ria', 'PIB Industrial', 'PIB Servi\u00e7os', 'PIB Total')
 data_inicio <- '2018-01-01'
 
 pib <- data.frame()
@@ -35,7 +28,7 @@ rm(temp,i,indic_pib,data_inicio)
 ### INFLAÇÃO ###
 ################
 
-indic_inflacao <- c('IGP-DI','IGP-M','INPC','IPA-DI', 'IPA-M','IPCA', 'IPCA-15','Preços administrados por contrato e monitorados')
+indic_inflacao <- c('IGP-DI','IGP-M','INPC','IPA-DI', 'IPA-M','IPCA', 'IPCA-15','Pre\u00e7os administrados por contrato e monitorados')
 data_inicio <- '2018-01-01'
 
 inflacao <- data.frame()
@@ -54,7 +47,7 @@ rm(temp,i,indic_inflacao,data_inicio)
 ### CÂMBIO - FOCUS ###
 ######################
 
-indic_cambio <- 'Taxa de câmbio'
+indic_cambio <- 'Taxa de c\u00e2mbio'
 data_inicio <- '2018-01-01'
 
 cambio <- get_annual_market_expectations(indic_cambio, start_date = data_inicio)
@@ -78,7 +71,7 @@ rm(indic_selic, data_inicio)
 ### BALANÇA COMERCIAL ###
 #########################
 
-indic_balanca_comercial <- 'Balança Comercial'
+indic_balanca_comercial <- 'Balan\u00e7a Comercial'
 data_inicio <- '2018-01-01'
 
 balanca_comercial <- get_annual_market_expectations(indic_balanca_comercial, start_date = data_inicio)
@@ -90,7 +83,7 @@ rm(indic_balanca_comercial, data_inicio)
 ### BALANÇO PAGAMENTOS ###
 ##########################
 
-indic_balanco_pagamentos <- 'Balanço de Pagamentos'
+indic_balanco_pagamentos <- 'Balan\u00e7o de Pagamentos'
 data_inicio <- '2018-01-01'
 
 balanco_pagamentos <- get_annual_market_expectations(indic_balanco_pagamentos, start_date = data_inicio)
