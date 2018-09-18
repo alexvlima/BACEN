@@ -19,6 +19,10 @@ library(plotly)
 ### SHINY DEPLOY ###
 ####################
 
+##########
+### UI ###
+##########
+
 ui <- dashboardPage(skin = 'blue', 
   dashboardHeader(title = 'Boletim Focus'),
   dashboardSidebar(
@@ -35,11 +39,11 @@ ui <- dashboardPage(skin = 'blue',
   dashboardBody(
     tabItems(
       tabItem(tabName = 'intro',
-              h3('Introdu\u00e7\u00e3o'),
-              h5('Este dashboard foi constru\u00eddo a partir dos dados disponibilizados nas s\u00e9ries temporais do Banco Central. Os dados correspondem as informa\u00e7\u00f5es do Boletim Focus.
+              h1('Introdu\u00e7\u00e3o'),
+              h3('Este dashboard foi constru\u00eddo a partir dos dados disponibilizados nas s\u00e9ries temporais do Banco Central. Os dados correspondem as informa\u00e7\u00f5es do Boletim Focus.
                  '),
-              h3('Boletim Focus'),
-              h5('Semanalmente, o Banco Central elabora um relat\u00f3rio com as expectativas de mercado para os principais \u00edndices econ\u00f4micos. O Departamento de Relacionamento com Investidores e Estudos Especiais (Gerin) \u00e9 o setor respons\u00e1vel pela confec\u00e7\u00e3o do relat\u00f3rio. O Focus faz parte do arcabou\u00e7o do regime monet\u00e1rio de metas de infla\u00e7\u00e3o. Seu objetivo \u00e9 monitorar a evolu\u00e7\u00e3o das expectativas de mercado, de forma a gerar subs\u00eddio para o processo decis\u00f3rio da pol\u00edtica monet\u00e1ria. 
+              h1('Boletim Focus'),
+              h3('Semanalmente, o Banco Central elabora um relat\u00f3rio com as expectativas de mercado para os principais \u00edndices econ\u00f4micos. O Departamento de Relacionamento com Investidores e Estudos Especiais (Gerin) \u00e9 o setor respons\u00e1vel pela confec\u00e7\u00e3o do relat\u00f3rio. O Focus faz parte do arcabou\u00e7o do regime monet\u00e1rio de metas de infla\u00e7\u00e3o. Seu objetivo \u00e9 monitorar a evolu\u00e7\u00e3o das expectativas de mercado, de forma a gerar subs\u00eddio para o processo decis\u00f3rio da pol\u00edtica monet\u00e1ria. 
                  ')),
       tabItem(tabName = 'pib',
               fluidRow(
@@ -130,11 +134,53 @@ ui <- dashboardPage(skin = 'blue',
                 )
               )
               ),
-      tabItem(tabName = 'cambio'),
+      tabItem(tabName = 'cambio',
+              fluidRow(
+                box(
+                  plotlyOutput('Graf_Cambio1')
+                ),
+                box(
+                  plotlyOutput('Graf_Cambio2')
+                )
+              ),
+              fluidRow(
+                box(
+                  title = h3(HTML('<center>Indicador</center>')),
+                  selectInput('indic_cambio', label = h4('Indicador:'),
+                              choices = list('Media do ano' = 'M\u00e9dia do ano',
+                                             'Fim do ano' = 'Fim do ano'),
+                              selected = 'Fim do ano')
+                ),
+                box(
+                  title = h3(HTML('<center>Filtros</center>')),
+                  dateRangeInput(inputId = 'data_cambio',
+                                 label = h4('Selecione o per\u00edodo:'),
+                                 format = 'mm/yyyy',
+                                 language='pt-BR',
+                                 min = '2018-01-01',
+                                 max = Sys.Date(),
+                                 start = '2018-01-01',
+                                 end = Sys.Date(),
+                                 startview = 'year',
+                                 separator = '-'),
+                  numericInput(inputId = 'num_cambio', 
+                               label = h4('Expectativa do Mercado para o Ano:'), 
+                               value = year(Sys.Date()), 
+                               min = year(Sys.Date()), 
+                               max = year(Sys.Date())+4),
+                  selectInput('metrica_cambio', label = h4('M\u00e9trica:'), 
+                              choices = list('Media' = 'mean', 'Mediana' = 'median', 'Minimo' = 'min', 'Maximo' = 'max', 'Desvio Padrao' = 'sd', 'Coeficiente de Variacao' = 'coefvar'),
+                              selected = 'mean')
+                )
+              )
+              ),
       tabItem(tabName = 'selic'),
       tabItem(tabName = 'sobre',
-              h3('Equipe'),
-              h5(HTML('- Alexandre Lima 
+              h1('Sobre'),
+              h3(HTML('Esse painel foi produzido pela A Unidade de Gest\u00e3o Estrat\u00e9gica do Sebrae Nacional. 
+                     <br> Foi utilizada a linguagem de programa\u00e7\u00e3o R para a manipula\u00e7\u00e3o dos dados. A publica\u00e7\u00e3o do painel ocorreu por meio da biblioteca Shiny.')),
+              h1('Equipe'),
+              h3(HTML('- Alexandre Lima 
                   <br>- Ananda S\u00e1
                   <br>- Aretha Zarlenga
                   <br>- Luiz Hissashi
@@ -147,6 +193,10 @@ ui <- dashboardPage(skin = 'blue',
   )
 )
 
+
+##############
+### SERVER ###
+##############
 
 server <- function(input, output) {
   
@@ -205,7 +255,26 @@ server <- function(input, output) {
                                       as.character(format(input$data_inflacao[2],format = '%m/%Y')))
   })
   
+  base_inflacao1 <- reactive({
+    inflacao %>%
+      select(indic,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic,date,reference_year)) %>%
+      filter(indic==input$indic_inflacao,
+             metric == input$metrica_inflacao,
+             date >= input$data_inflacao[1] & date <= input$data_inflacao[2])
+  })
   
+  output$Graf_Inflacao1 <- 
+    renderPlotly({
+      Base_inflacao1 <- base_inflacao1() %>% filter(date == max(date))
+      plot_ly(Base_inflacao1, 
+              x = ~reference_year, y=~value) %>%
+        layout(title = 'Taxa Esperada de Infla\u00e7\u00e3o',
+               xaxis = list(title = ''),
+               yaxis = list(title = '% a.a')) %>%
+        add_trace(hoverinfo = 'y')
+      
+    })
   
   base_inflacao2 <- reactive({
     inflacao %>%
@@ -228,7 +297,59 @@ server <- function(input, output) {
                yaxis = list(title = '% a.a')) %>%
         add_trace(hoverinfo = 'y')
   })
+  
+  dates_cambio <- reactiveValues()
+  observe({
+    dates_cambio$SelectedDates <- c(as.character(format(input$data_cambio[1],format = '%m/%Y')),
+                                      as.character(format(input$data_cambio[2],format = '%m/%Y')))
+  })
+  
+  base_cambio1 <- reactive({
+    cambio %>%
+      select(indic_detail,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic_detail,date,reference_year)) %>%
+      filter(indic_detail==input$indic_cambio,
+             metric == input$metrica_cambio,
+             date >= input$data_cambio[1] & date <= input$data_cambio[2])
+  })
+  
+  output$Graf_Cambio1 <- 
+    renderPlotly({
+      Base_cambio1 <- base_cambio1() %>% filter(date == max(date))
+      plot_ly(Base_cambio1, 
+              x = ~reference_year, y=~value) %>%
+        layout(title = 'Taxa Esperada do C\u00e2mbio',
+               xaxis = list(title = ''),
+               yaxis = list(title = 'R$ / US$')) %>%
+        add_trace(hoverinfo = 'y')
+      
+    })
+  
+  base_cambio2 <- reactive({
+    cambio %>%
+      select(indic_detail,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic_detail,date,reference_year)) %>%
+      filter(indic_detail==input$indic_cambio,
+             reference_year==input$num_cambio,
+             metric == input$metrica_cambio,
+             date >= input$data_cambio[1] & date <= input$data_cambio[2])
+  })
+  
+  output$Graf_Cambio2 <- 
+    renderPlotly({
+      Base_cambio2 <- base_cambio2() %>% filter(reference_year==input$num_cambio)
+      plot_ly(
+        Base_cambio2, 
+        x = ~date, y=~value) %>%
+        layout(title = paste0('Taxa Esperada para ',input$num_cambio),
+               xaxis = list(title = ''),
+               yaxis = list(title = 'R$ / US$')) %>%
+        add_trace(hoverinfo = 'y')
+    })
+  
 }
   
 
 shinyApp(ui, server)
+ 
+
