@@ -515,7 +515,7 @@ server <- function(input, output) {
   
   output$Graf_Balanca_Comercial2 <- 
     renderPlotly({
-      Base_balanca_comercial2 <- base_balanca_comercial2() %>% filter(reference_year==input$num_selic)
+      Base_balanca_comercial2 <- base_balanca_comercial2() %>% filter(reference_year==input$num_balanca_comercial)
       plot_ly(
         Base_balanca_comercial2, 
         x = ~date, y=~value) %>%
