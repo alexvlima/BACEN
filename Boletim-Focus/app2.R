@@ -32,8 +32,8 @@ ui <- dashboardPage(skin = 'blue',
       menuItem('Infla\u00e7\u00e3o', tabName = 'inflacao', icon = icon('line-chart')),
       menuItem('C\u00e2mbio', tabName = 'cambio', icon = icon('money')),
       menuItem('Selic', tabName = 'selic', icon = icon('line-chart')),
+      menuItem('Balan\u00e7a Comercial', tabName = 'balanca_comercial', icon = icon('balance-scale')),
       menuItem('Sobre', tabName = 'sobre', icon = icon('question'))
-      
     ) 
   ),
   dashboardBody(
@@ -174,10 +174,90 @@ ui <- dashboardPage(skin = 'blue',
                 )
               )
               ),
-      tabItem(tabName = 'selic'),
+      tabItem(tabName = 'selic',
+              fluidRow(
+                box(
+                  plotlyOutput('Graf_Selic1')
+                ),
+                box(
+                  plotlyOutput('Graf_Selic2')
+                )
+              ),
+              fluidRow(
+                box(
+                  title = h3(HTML('<center>Indicador</center>')),
+                  selectInput('indic_selic', label = h4('Indicador:'),
+                              choices = list('Media do ano' = 'M\u00e9dia do ano',
+                                             'Fim do ano' = 'Fim do ano'),
+                              selected = 'Fim do ano')
+                ),
+                box(
+                  title = h3(HTML('<center>Filtros</center>')),
+                  dateRangeInput(inputId = 'data_selic',
+                                 label = h4('Selecione o per\u00edodo:'),
+                                 format = 'mm/yyyy',
+                                 language='pt-BR',
+                                 min = '2018-01-01',
+                                 max = Sys.Date(),
+                                 start = '2018-01-01',
+                                 end = Sys.Date(),
+                                 startview = 'year',
+                                 separator = '-'),
+                  numericInput(inputId = 'num_selic', 
+                               label = h4('Expectativa do Mercado para o Ano:'), 
+                               value = year(Sys.Date()), 
+                               min = year(Sys.Date()), 
+                               max = year(Sys.Date())+4),
+                  selectInput('metrica_selic', label = h4('M\u00e9trica:'), 
+                              choices = list('Media' = 'mean', 'Mediana' = 'median', 'Minimo' = 'min', 'Maximo' = 'max', 'Desvio Padrao' = 'sd', 'Coeficiente de Variacao' = 'coefvar'),
+                              selected = 'mean')
+                )
+              )
+              ),
+      tabItem(tabName = 'balanca_comercial',
+              fluidRow(
+                box(
+                  plotlyOutput('Graf_Balanca_Comercial1')
+                ),
+                box(
+                  plotlyOutput('Graf_Balanca_Comercial2')
+                )
+              ),
+              fluidRow(
+                box(
+                  title = h3(HTML('<center>Indicador</center>')),
+                  selectInput('indic_balanca_comercial', label = h4('Indicador:'),
+                              choices = list('Exportacoes' = 'Exporta\u00e7\u00f5es',
+                                             'Importacoes' = 'Importa\u00e7\u00f5es',
+                                             'Saldo' = 'Saldo'),
+                              selected = 'Saldo')
+                ),
+                box(
+                  title = h3(HTML('<center>Filtros</center>')),
+                  dateRangeInput(inputId = 'data_balanca_comercial',
+                                 label = h4('Selecione o per\u00edodo:'),
+                                 format = 'mm/yyyy',
+                                 language='pt-BR',
+                                 min = '2018-01-01',
+                                 max = Sys.Date(),
+                                 start = '2018-01-01',
+                                 end = Sys.Date(),
+                                 startview = 'year',
+                                 separator = '-'),
+                  numericInput(inputId = 'num_balanca_comercial', 
+                               label = h4('Expectativa do Mercado para o Ano:'), 
+                               value = year(Sys.Date()), 
+                               min = year(Sys.Date()), 
+                               max = year(Sys.Date())+4),
+                  selectInput('metrica_balanca_comercial', label = h4('M\u00e9trica:'), 
+                              choices = list('Media' = 'mean', 'Mediana' = 'median', 'Minimo' = 'min', 'Maximo' = 'max', 'Desvio Padrao' = 'sd', 'Coeficiente de Variacao' = 'coefvar'),
+                              selected = 'mean')
+                )
+              )
+      ),
       tabItem(tabName = 'sobre',
               h1('Sobre'),
-              h3(HTML('Esse painel foi produzido pela A Unidade de Gest\u00e3o Estrat\u00e9gica do Sebrae Nacional. 
+              h3(HTML('Esse painel foi produzido pela Unidade de Gest\u00e3o Estrat\u00e9gica do Sebrae Nacional. 
                      <br> Foi utilizada a linguagem de programa\u00e7\u00e3o R para a manipula\u00e7\u00e3o dos dados. A publica\u00e7\u00e3o do painel ocorreu por meio da biblioteca Shiny.')),
               h1('Equipe'),
               h3(HTML('- Alexandre Lima 
@@ -347,6 +427,103 @@ server <- function(input, output) {
         add_trace(hoverinfo = 'y')
     })
   
+  dates_selic <- reactiveValues()
+  observe({
+    dates_selic$SelectedDates <- c(as.character(format(input$data_selic[1],format = '%m/%Y')),
+                                    as.character(format(input$data_selic[2],format = '%m/%Y')))
+  })
+  
+  base_selic1 <- reactive({
+    selic %>%
+      select(indic_detail,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic_detail,date,reference_year)) %>%
+      filter(indic_detail==input$indic_selic,
+             metric == input$metrica_selic,
+             date >= input$data_selic[1] & date <= input$data_selic[2])
+  })
+  
+  output$Graf_Selic1 <- 
+    renderPlotly({
+      Base_selic1 <- base_selic1() %>% filter(date == max(date))
+      plot_ly(Base_selic1, 
+              x = ~reference_year, y=~value) %>%
+        layout(title = 'Taxa Esperada da Selic',
+               xaxis = list(title = ''),
+               yaxis = list(title = '% a.a')) %>%
+        add_trace(hoverinfo = 'y')
+      
+    })
+  
+  base_selic2 <- reactive({
+    selic %>%
+      select(indic_detail,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic_detail,date,reference_year)) %>%
+      filter(indic_detail==input$indic_selic,
+             reference_year==input$num_selic,
+             metric == input$metrica_selic,
+             date >= input$data_selic[1] & date <= input$data_selic[2])
+  })
+  
+  output$Graf_Selic2 <- 
+    renderPlotly({
+      Base_selic2 <- base_selic2() %>% filter(reference_year==input$num_selic)
+      plot_ly(
+        Base_selic2, 
+        x = ~date, y=~value) %>%
+        layout(title = paste0('Taxa Esperada para ',input$num_selic),
+               xaxis = list(title = ''),
+               yaxis = list(title = '% a.a')) %>%
+        add_trace(hoverinfo = 'y')
+    })
+  
+  dates_balanca_comercial <- reactiveValues()
+  observe({
+    dates_balanca_comercial$SelectedDates <- c(as.character(format(input$data_balanca_comercial[1],format = '%m/%Y')),
+                                               as.character(format(input$data_balanca_comercial[2],format = '%m/%Y')))
+  })
+  
+  base_balanca_comercial1 <- reactive({
+    balanca_comercial %>%
+      select(indic_detail,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic_detail,date,reference_year)) %>%
+      filter(indic_detail==input$indic_balanca_comercial,
+             metric == input$metrica_balanca_comercial,
+             date >= input$data_balanca_comercial[1] & date <= input$data_balanca_comercial[2])
+  })
+  
+  output$Graf_Balanca_Comercial1 <- 
+    renderPlotly({
+      Base_balanca_comercial1 <- base_balanca_comercial1() %>% filter(date == max(date))
+      plot_ly(Base_balanca_comercial1, 
+              x = ~reference_year, y=~value) %>%
+        layout(title = 'Valor Esperado da Balan\u00e7a Comercial',
+               xaxis = list(title = ''),
+               yaxis = list(title = 'US$ (em bilh\u00f5es)')) %>%
+        add_trace(hoverinfo = 'y')
+      
+    })
+  
+  base_balanca_comercial2 <- reactive({
+    balanca_comercial %>%
+      select(indic_detail,date,reference_year, mean, median, min, max, sd, coefvar) %>%
+      gather("metric", "value", -c(indic_detail,date,reference_year)) %>%
+      filter(indic_detail==input$indic_balanca_comercial,
+             reference_year==input$num_balanca_comercial,
+             metric == input$metrica_balanca_comercial,
+             date >= input$data_balanca_comercial[1] & date <= input$data_balanca_comercial[2])
+  })
+  
+  output$Graf_Balanca_Comercial2 <- 
+    renderPlotly({
+      Base_balanca_comercial2 <- base_balanca_comercial2() %>% filter(reference_year==input$num_selic)
+      plot_ly(
+        Base_balanca_comercial2, 
+        x = ~date, y=~value) %>%
+        layout(title = paste0('Valor Esperado da Balan\u00e7a Comercial para ',input$num_balanca_comercial),
+               xaxis = list(title = ''),
+               yaxis = list(title = 'US$ (em bilh\u00f5es)')) %>%
+        add_trace(hoverinfo = 'y')
+    })
 }
   
 
