@@ -199,7 +199,6 @@ server <- function(input, output, session){
   library(dplyr)
   library(tidyr)
   library(lubridate)
-  library(plotly)
   
   dates_pib <- reactiveValues()
   observe({
