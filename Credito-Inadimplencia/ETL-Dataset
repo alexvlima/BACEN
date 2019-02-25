@@ -1,9 +1,0 @@
-#!/bin/sh
-
-cd /var/www/html/toq
-
-php console.php model drop datasebrae credito producao
-php console.php model create datasebrae credito producao
-php console.php model index datasebrae credito
-php console.php model load datasebrae credito producao    
-php console.php model constraint up datasebrae credito producao
